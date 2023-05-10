@@ -1,44 +1,43 @@
-# Use the alpine image as the base
-FROM alpine:latest
+FROM golang:1.17-alpine3.14 as go-builder
 
 # Install dependencies
-RUN apk add --no-cache git go protobuf dart
+RUN apk add --no-cache git protobuf
 
-# Install protoc-gen-go and protoc-gen-go-grpc
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1 && \
-    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
+# Clone and build protoc-gen-go
+WORKDIR /app
+RUN git clone https://github.com/protocolbuffers/protobuf-go.git /app/protoc-gen-go
+WORKDIR /app/protoc-gen-go/cmd/protoc-gen-go
+RUN go build -o /go/bin/protoc-gen-go .
 
-# Install Dart protoc_plugin
-RUN pub global activate protoc_plugin
+# Clone and build protoc-gen-go-grpc
+WORKDIR /app
+RUN git clone https://github.com/grpc/grpc-go.git
+WORKDIR /app/grpc-go/cmd/protoc-gen-go-grpc
+RUN go build -o /go/bin/protoc-gen-go-grpc .
 
-# Set the necessary paths
-ENV PATH="/root/go/bin:${PATH}"
-ENV PATH="/root/.pub-cache/bin:${PATH}"
-
-# Create a working directory
+# Dart build stage
+FROM dart:stable as dart-builder
 RUN mkdir /app
 WORKDIR /app
+RUN apt-get update && apt-get install -y git
+RUN git clone https://github.com/google/protobuf.dart.git
+WORKDIR /app/protobuf.dart/protoc_plugin
+RUN dart pub get
+RUN dart compile exe bin/protoc_plugin.dart -o bin/protoc-gen-dart
+RUN chmod +x bin/protoc-gen-dart
 
-# Clone the repository
-ARG GIT_REPO_URL
-ARG GIT_USER
-ARG GIT_EMAIL
-ARG GIT_CREDENTIAL_HELPER_SCRIPT
-RUN git config --global user.name "${GIT_USER}" && \
-    git config --global user.email "${GIT_EMAIL}" && \
-    git config --global credential.helper "${GIT_CREDENTIAL_HELPER_SCRIPT}" && \
-    git clone "${GIT_REPO_URL}" .
+# Final stage
+FROM alpine:3.14
 
-# Build the .proto files
-RUN mkdir -p generated && \
-    find . -name '*.proto' -exec protoc \
-    --proto_path=. \
-    --go_out=generated --go_opt=paths=source_relative \
-    --go-grpc_out=generated --go-grpc_opt=paths=source_relative \
-    --dart_out=grpc:generated \
-    {} +
+# Install Git
+RUN apk add --no-cache protoc protobuf protobuf-dev
+# Create a working directory
 
-# Commit and push the generated files
-RUN git add -A && \
-    git commit -m "Generated Go and Dart files from .proto files" && \
-    git push
+# Copy the Go and Dart binaries and libraries from the build stages
+COPY --from=dart-builder /runtime/ /
+COPY --from=dart-builder /app/protobuf.dart/protoc_plugin/bin/protoc-gen-dart /usr/bin
+COPY --from=go-builder /go/bin/protoc-gen-go /usr/bin/protoc-gen-go
+COPY --from=go-builder /go/bin/protoc-gen-go-grpc /usr/bin/protoc-gen-go-grpc
+
+# Set the necessary paths for Go and Dart
+ENV PATH="/usr/local/go/bin:/usr/bin:${PATH}"
