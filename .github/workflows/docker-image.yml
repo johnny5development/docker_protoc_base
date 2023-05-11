@@ -9,6 +9,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    
+    - name: Prepare
+      id: prep
+      run: |
+        IMAGE_TAG=${{ secrets.DOCKER_REGISTRY_LOGIN_NAME }}/minimal_protoc_env:lastest
+        echo ::set-output name=tagged_image::${IMAGE_TAG}
     - uses: actions/checkout@v3
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
@@ -24,5 +30,5 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_REGISTRY_LOGIN_NAME }}/minimal_protoc_env:$(date +%s)
+        tags: ${{ steps.prep.outputs.tagged_image }}
         
