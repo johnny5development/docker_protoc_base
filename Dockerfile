@@ -36,7 +36,6 @@ RUN apk add --no-cache protoc protobuf protobuf-dev
 # Copy the Go and Dart binaries and libraries from the build stages
 # Dart comes with its own runtime, so we copy that as well
 # We only use the base runtime; the rest of the libraries are not needed
-
 COPY --from=dart-builder /runtime/ /
 COPY --from=dart-builder /app/protobuf.dart/protoc_plugin/bin/protoc-gen-dart /usr/bin
 COPY --from=go-builder /go/bin/protoc-gen-go /usr/bin/protoc-gen-go
