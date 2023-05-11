@@ -11,4 +11,13 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag minimal_protoc_env:$(date +%s)
+      run: |
+        docker build . --file Dockerfile --tag minimal_protoc_env:$(date +%s)
+    - name: Login to Docker Registry
+      run: echo "${{ secrets.DOCKER_REGISTRY_TOKEN }}" | docker login -u "${{ secrets.DOCKER_REGISTRY_LOGIN_NAME }}" --password-stdin
+    - name: Push the Docker image
+      run: |
+        IMAGE_ID=minimal_protoc_env
+        IMAGE_TAG=$(date +%s)
+        docker tag $IMAGE_ID $DOCKER_USERNAME/$IMAGE_ID:$IMAGE_TAG
+        docker push $DOCKER_USERNAME/$IMAGE_ID:$IMAGE_TAG
