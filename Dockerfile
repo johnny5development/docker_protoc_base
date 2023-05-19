@@ -29,7 +29,7 @@ RUN chmod +x bin/protoc-gen-dart
 # Java build stage
 FROM openjdk:11-jdk-slim as java-builder
 WORKDIR /app
-RUN apt-get update && apt-get install -y git protobuf-compiler build-essential
+RUN apt-get update && apt-get install -y git protobuf-compiler build-essential libprotobuf-dev
 RUN git clone https://github.com/grpc/grpc-java.git
 WORKDIR /app/grpc-java
 RUN ./gradlew java_pluginExecutable -PskipAndroid=true
