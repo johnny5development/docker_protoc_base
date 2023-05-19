@@ -27,30 +27,17 @@ RUN dart compile exe bin/protoc_plugin.dart -o bin/protoc-gen-dart
 RUN chmod +x bin/protoc-gen-dart
 
 # Java build stage
-FROM openjdk:11-jdk-slim as java-builder
-WORKDIR /app
-RUN apt-get update && apt-get install -y git protobuf-compiler build-essential libprotobuf-dev
-RUN git clone https://github.com/grpc/grpc-java.git
-WORKDIR /app/grpc-java
-RUN ./gradlew java_pluginExecutable -PskipAndroid=true
-RUN mv ./compiler/build/exe/java_plugin/protoc-gen-grpc-java /usr/local/bin
-
-
-# Python build stage
-FROM python:3.9-slim as python-builder
-WORKDIR /app
-RUN apt-get update && apt-get install -y git protobuf-compiler
-RUN git clone https://github.com/grpc/grpc.git
-WORKDIR /app/grpc
-RUN git submodule update --init
-RUN make grpc_python_plugin
-RUN mv ./bins/opt/grpc_python_plugin /usr/local/bin/protoc-gen-grpc-python
+FROM alpine:3.14 as java-builder
+RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
+RUN apk update
+RUN apk add --no-cache grpc-java
 
 # Final stage
 FROM alpine:3.14
 
 # Install Git
 RUN apk add --no-cache protoc protobuf protobuf-dev
+
 # Create a working directory
 
 # Copy the Go and Dart binaries and libraries from the build stages
@@ -61,8 +48,7 @@ COPY --from=dart-builder /runtime/ /
 COPY --from=dart-builder /app/protobuf.dart/protoc_plugin/bin/protoc-gen-dart /usr/bin
 COPY --from=go-builder /go/bin/protoc-gen-go /usr/bin/protoc-gen-go
 COPY --from=go-builder /go/bin/protoc-gen-go-grpc /usr/bin/protoc-gen-go-grpc
-COPY --from=java-builder /usr/local/bin/protoc-gen-grpc-java /usr/bin
-COPY --from=python-builder /usr/local/bin/protoc-gen-grpc-python /usr/bin
+COPY --from=java-builder /usr/bin/protoc-gen-grpc-java /usr/bin
 
 # Set the necessary paths for Go and Dart
 ENV PATH="/usr/local/go/bin:/usr/bin:${PATH}"
