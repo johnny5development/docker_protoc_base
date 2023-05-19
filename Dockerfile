@@ -31,9 +31,9 @@ FROM openjdk:11-jdk-slim as java-builder
 WORKDIR /app
 RUN apt-get update && apt-get install -y git protobuf-compiler
 RUN git clone https://github.com/grpc/grpc-java.git
-WORKDIR /app/grpc-java/compiler
+WORKDIR /app/grpc-java
 RUN ./gradlew java_pluginExecutable
-RUN mv ./build/exe/java_plugin/protoc-gen-grpc-java /usr/local/bin
+RUN mv ./compiler/build/exe/java_plugin/protoc-gen-grpc-java /usr/local/bin
 
 # Python build stage
 FROM python:3.9-slim as python-builder
