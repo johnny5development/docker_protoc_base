@@ -32,7 +32,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y git protobuf-compiler
 RUN git clone https://github.com/grpc/grpc-java.git
 WORKDIR /app/grpc-java
-RUN ./gradlew java_pluginExecutable
+RUN ./gradlew java_pluginExecutable -PskipAndroid=true
 RUN mv ./compiler/build/exe/java_plugin/protoc-gen-grpc-java /usr/local/bin
 
 # Python build stage
