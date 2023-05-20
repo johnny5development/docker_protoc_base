@@ -1,5 +1,4 @@
 FROM golang:1.17-alpine3.14 as go-builder
-
 # Install dependencies
 RUN apk add --no-cache git protobuf
 
